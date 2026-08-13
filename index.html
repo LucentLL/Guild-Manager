@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Guild Manager</title>
+    <title>Unity Web Player | Guild Manager</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
   </head>
@@ -20,7 +20,7 @@
       <div id="unity-footer">
         <div id="unity-logo-title-footer"></div>
         <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">Guild Manager — browser build: a look, not a measurement</div>
+        <div id="unity-build-title">Guild Manager</div>
       </div>
     </div>
     <script>
@@ -97,13 +97,9 @@
         document.querySelector("#unity-container").className = "unity-mobile";
         canvas.className = "unity-mobile";
 
-        // RENDER AT 1x ON A PHONE. A handset reports a devicePixelRatio of 3,
-        // so the default fills a 2400x1080 render target and the arena crawls
-        // — which would read as "Unity is slow on mobile" when what it prices
-        // is a browser drawing nine times the pixels a native build would
-        // choose. This link is a look-at-it check; misleading it PESSIMISTIC
-        // is no better than misleading it optimistic.
-        config.devicePixelRatio = 1;
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
 
 
       } else {
