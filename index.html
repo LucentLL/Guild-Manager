@@ -248,13 +248,53 @@
         }
       }
 
+      // ── A MANAGED EXCEPTION HAS TO BE READABLE ON THE DEVICE ──────────────
+      // Unity catches an exception thrown inside a callback, logs it, and keeps
+      // the loop running — so a screen that failed to build looks exactly like
+      // a screen that was never asked for: the world carries on turning behind
+      // nothing. That is the report this build was cut to answer ("I just see
+      // the arena map rotating from an isometric perspective. nothing else",
+      // user 2026-08-14) and it is unreproducible in the Editor, where the same
+      // door draws 395 elements.
+      //
+      // Debug.LogError and IL2CPP's own unhandled-exception path both land on
+      // console.error, which on a phone goes nowhere. This puts them on the
+      // glass. Capped, because an exception thrown from Update arrives once a
+      // frame and an unbounded log would BE the crash.
+      var shownErrors = 0;
+      function surface(text) {
+        if (shownErrors >= 6) return;
+        if (++shownErrors === 6) text += "\n(further errors suppressed)";
+        unityShowBanner(text, 'error');
+      }
+      var consoleError = console.error ? console.error.bind(console) : function () {};
+      console.error = function () {
+        var parts = [];
+        for (var i = 0; i < arguments.length; i++) parts.push(String(arguments[i]));
+        surface(parts.join(' '));
+        consoleError.apply(null, arguments);
+      };
+      window.addEventListener('error', function (e) {
+        surface((e && e.message ? e.message : 'error') +
+                (e && e.filename ? '  @' + e.filename + ':' + e.lineno : ''));
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        surface('unhandled rejection: ' + String(e && e.reason));
+      });
+      // Tap the strip to clear it — it sits over the top of the game.
+      logBox.addEventListener('click', function () {
+        logBox.textContent = '';
+        logBox.style.display = 'none';
+        shownErrors = 0;
+      });
+
       // EVERY PAYLOAD CARRIES THE BUILD'S OWN STAMP. GitHub Pages serves these
       // files with a long-lived ETag, and a redeploy that keeps the same four
       // names is a redeploy a phone may never see: the deployed build the user
       // played on 2026-08-14 was three commits behind the source it was cut
       // from. BuildScript.cs writes the stamp in after the build — see
       // StampCacheBuster there; the placeholder below is what it replaces.
-      var v = "?v=20260814-1701";
+      var v = "?v=20260814-1929";
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/WebGL.loader.js" + v;
