@@ -2,132 +2,342 @@
 <html lang="en-us">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | Guild Manager</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-  </head>
-  <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-logo-title-footer"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">Guild Manager</div>
-      </div>
-    </div>
-    <script>
-      var canvas = document.querySelector("#unity-canvas");
+    <!--
+      THE PAGE IS THE SCREEN.
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
-      function unityShowBanner(msg, type) {
-        var warningBanner = document.querySelector("#unity-warning");
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
+      Unity's stock template draws the game into a 960x600 BOX in the middle of
+      a white page, with a Unity footer bar under it; on a phone it fills the
+      client area but leaves the display cutout unpainted, because its viewport
+      meta has no `viewport-fit=cover`. Both were reported as one complaint —
+      "the game should be full screen" (user, 2026-08-14).
+
+      Everything this template does is in THIS ONE FILE — the styles are inline
+      and the favicon is a data URI. That is the same law UiRoot.cs keeps for
+      the runtime UI ("an asset a build must carry is an asset a build can
+      silently lose"), and it means a deploy is index.html plus Build/, with no
+      TemplateData folder that can arrive half-uploaded.
+    -->
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0e0d0a">
+    <title>Guild Manager</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e0d0a'/%3E%3Cpath d='M8 2l5 3v6l-5 3-5-3V5z' fill='%23d4a842'/%3E%3C/svg%3E">
+    <style>
+      /* The hall's own palette — UiKit.Ink / Gold / Parchment, so the page the
+         game loads in is the same room as the game. */
+      :root {
+        --ink: #0e0d0a;
+        --ink-soft: #17150f;
+        --gold: #d4a842;
+        --gold-dim: #9e8038;
+        --parchment: #e8dcbf;
       }
 
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--ink);
+        color: var(--parchment);
+        font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+        overflow: hidden;
+        /* A game canvas must never rubber-band or pull-to-refresh under a thumb. */
+        overscroll-behavior: none;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      /* FIXED AND INSET, NOT 100%. A phone's layout viewport is taller than the
+         part you can see while the URL bar is up; `100dvh` is the DYNAMIC
+         viewport — exactly the visible height, whatever the browser chrome is
+         doing this second — so the canvas is never drawn under the address bar
+         and never leaves a strip of page below it. The 100vh line above it is
+         the fallback for browsers without dvh. */
+      #unity-container {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+      }
+
+      #unity-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: var(--ink);
+        /* No browser gestures on the play surface: the touch stick and the
+           swing disc are TouchControls', and a pinch that zooms the PAGE is a
+           pinch the camera never sees. */
+        touch-action: none;
+        outline: none;
+      }
+
+      /* ── The gate ──────────────────────────────────────────────────────────
+         WHY THERE IS A TAP BETWEEN LOADING AND PLAYING. The Fullscreen API
+         only answers a USER GESTURE — a page cannot put itself full screen on
+         load, by rule, in every browser. So the loading screen ends in a
+         button rather than dissolving on its own: the tap that starts the game
+         is the same tap that spends the gesture. Nothing is hidden behind it —
+         "stay in the page" is right there for anyone who would rather not. */
+      #gate {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+                 max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        background: var(--ink);
+        text-align: center;
+        z-index: 10;
+      }
+      #gate.gone { display: none; }
+
+      #gate h1 {
+        margin: 0;
+        font-size: clamp(22px, 5vw, 40px);
+        letter-spacing: 0.06em;
+        color: var(--gold);
+        font-weight: 700;
+      }
+
+      #gate .sub {
+        margin: 0;
+        font-size: clamp(11px, 2.4vw, 14px);
+        color: var(--gold-dim);
+        letter-spacing: 0.04em;
+      }
+
+      #bar {
+        width: min(320px, 70vw);
+        height: 10px;
+        border: 1px solid rgba(212, 168, 66, 0.45);
+        border-radius: 5px;
+        overflow: hidden;
+        background: rgba(212, 168, 66, 0.08);
+      }
+      #bar > i {
+        display: block;
+        width: 0%;
+        height: 100%;
+        background: var(--gold);
+        transition: width 0.15s linear;
+      }
+
+      #enter {
+        appearance: none;
+        border: 1px solid rgba(212, 168, 66, 0.55);
+        border-radius: 4px;
+        background: var(--ink-soft);
+        color: var(--gold);
+        font: 700 clamp(13px, 3vw, 16px)/1 inherit;
+        letter-spacing: 0.08em;
+        padding: 14px 26px;
+        cursor: pointer;
+        /* Hidden rather than disabled until the build has landed: a button you
+           can press that does nothing is worse than one that is not there. */
+        visibility: hidden;
+      }
+      #enter.ready { visibility: visible; }
+      #enter:hover { background: #211d12; }
+
+      #windowed {
+        background: none;
+        border: 0;
+        color: var(--gold-dim);
+        font: 400 clamp(10px, 2.2vw, 13px)/1 inherit;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 6px;
+        visibility: hidden;
+      }
+      #windowed.ready { visibility: visible; }
+
+      /* The way back to full screen after an Escape or a swipe out. It sits in
+         the BOTTOM-LEFT: the fight paints its own column top-right and the
+         estate walk paints its buttons top-left, and two sets of controls in
+         one corner is the mis-tap the walk's own HUD note already records. */
+      #fs {
+        position: absolute;
+        left: max(8px, env(safe-area-inset-left));
+        bottom: max(8px, env(safe-area-inset-bottom));
+        width: 34px;
+        height: 34px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(212, 168, 66, 0.35);
+        border-radius: 4px;
+        background: rgba(14, 13, 10, 0.55);
+        color: var(--gold);
+        font-size: 15px;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0.45;
+        z-index: 9;
+      }
+      #fs.show { display: flex; }
+      #fs:hover { opacity: 1; }
+
+      /* Warnings and errors, ON THE GLASS. A phone has no console, and the one
+         thing that has cost this port the most time is a failure that was only
+         visible in one. */
+      #log {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 11;
+        font: 400 12px/1.4 ui-monospace, Consolas, monospace;
+        display: none;
+      }
+      #log > div { padding: 8px 10px; }
+      #log .warn { background: #6b5a10; color: #fff6cf; }
+      #log .err  { background: #6b1414; color: #ffd9d9; }
+    </style>
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+
+      <div id="gate">
+        <h1>Guild Manager</h1>
+        <p class="sub" id="status">Loading…</p>
+        <div id="bar"><i></i></div>
+        <button id="enter" type="button">ENTER FULL SCREEN</button>
+        <button id="windowed" type="button">stay in the page</button>
+      </div>
+
+      <div id="fs" title="Full screen">&#9974;</div>
+      <div id="log"></div>
+    </div>
+
+    <script>
+      var canvas   = document.querySelector("#unity-canvas");
+      var gate     = document.querySelector("#gate");
+      // NOT `status`: `window.status` is a legacy STRING property of Window, so
+      // a global `var status = <element>` is coerced to a string and every
+      // `note.textContent = …` after it silently does nothing. Measured — the
+      // loading line stayed on its initial text while the bar reached 100%.
+      var note     = document.querySelector("#status");
+      var barFill  = document.querySelector("#bar > i");
+      var enterBtn = document.querySelector("#enter");
+      var windowBtn= document.querySelector("#windowed");
+      var fsBtn    = document.querySelector("#fs");
+      var logBox   = document.querySelector("#log");
+
+      // Unity calls this for its own non-fatal warnings; the catch handler
+      // below routes load failures here too, so nothing dies silently.
+      function unityShowBanner(msg, type) {
+        var div = document.createElement('div');
+        div.className = (type === 'error') ? 'err' : 'warn';
+        div.textContent = msg;
+        logBox.appendChild(div);
+        logBox.style.display = 'block';
+        if (type !== 'error') {
+          setTimeout(function () {
+            div.remove();
+            if (!logBox.children.length) logBox.style.display = 'none';
+          }, 6000);
+        }
+      }
+
+      // EVERY PAYLOAD CARRIES THE BUILD'S OWN STAMP. GitHub Pages serves these
+      // files with a long-lived ETag, and a redeploy that keeps the same four
+      // names is a redeploy a phone may never see: the deployed build the user
+      // played on 2026-08-14 was three commits behind the source it was cut
+      // from. BuildScript.cs writes the stamp in after the build — see
+      // StampCacheBuster there; the placeholder below is what it replaces.
+      var v = "?v=20260814-1701";
+
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/WebGL.loader.js" + "?v=1786724017022";
+      var loaderUrl = buildUrl + "/WebGL.loader.js" + v;
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/WebGL.data" + "?v=1786724017022",
-        frameworkUrl: buildUrl + "/WebGL.framework.js" + "?v=1786724017022",
-        codeUrl: buildUrl + "/WebGL.wasm" + "?v=1786724017022",
+        dataUrl: buildUrl + "/WebGL.data" + v,
+        frameworkUrl: buildUrl + "/WebGL.framework.js" + v,
+        codeUrl: buildUrl + "/WebGL.wasm" + v,
         streamingAssetsUrl: "StreamingAssets",
         companyName: "DefaultCompany",
         productName: "Guild Manager",
         productVersion: "0.1.0",
         showBanner: unityShowBanner,
-        // errorHandler: function(err, url, line) {
-        //    alert("error " + err + " occurred at line " + line);
-        //    // Return 'true' if you handled this error and don't want Unity
-        //    // to process it further, 'false' otherwise.
-        //    return true;
-        // },
       };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
+      // The canvas is sized by CSS (100% of a fixed, dvh-tall container) and
+      // Unity keeps the render target matched to it — including through a
+      // rotation, which is why nothing here listens for `resize`. The panel's
+      // own layout axis is re-decided every frame by UiRoot.FitToScreen().
+      //
+      // devicePixelRatio is deliberately LEFT ALONE: capping it to 1 would buy
+      // a large fill-rate saving on a handset and cost this build its pixel
+      // grid, and that is a look decision, not a template decision.
+      // config.devicePixelRatio = 1;
 
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
+      var unityInstance = null;
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
-
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
+      function goFullscreen() {
+        // Unity's own call (it drives the canvas element and tells the engine),
+        // with the plain DOM request as the fallback for browsers where the
+        // engine's path is refused.
+        try {
+          if (unityInstance) { unityInstance.SetFullscreen(1); return; }
+        } catch (e) { /* fall through */ }
+        var el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el);
       }
 
-      document.querySelector("#unity-loading-bar").style.display = "block";
+      function start(fullscreen) {
+        gate.classList.add('gone');
+        if (fullscreen) goFullscreen();
+        canvas.focus();
+        syncFsButton();
+      }
+
+      enterBtn.addEventListener('click', function () { start(true); });
+      windowBtn.addEventListener('click', function () { start(false); });
+      fsBtn.addEventListener('click', goFullscreen);
+
+      // The corner button only exists while there is somewhere to go: it is
+      // hidden the moment the document IS full screen, so it never sits on top
+      // of the game offering what the game already has.
+      function syncFsButton() {
+        var full = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        fsBtn.classList.toggle('show', !full && gate.classList.contains('gone'));
+      }
+      document.addEventListener('fullscreenchange', syncFsButton);
+      document.addEventListener('webkitfullscreenchange', syncFsButton);
 
       var script = document.createElement("script");
       script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          barFill.style.width = (100 * progress) + "%";
+          note.textContent = progress < 1 ? "Loading… " + Math.round(progress * 100) + "%"
+                                            : "Ready.";
+        }).then(function (instance) {
+          unityInstance = instance;
+          note.textContent = "The guild is waiting.";
+          barFill.style.width = "100%";
+          enterBtn.classList.add('ready');
+          windowBtn.classList.add('ready');
+        }).catch(function (message) {
+          note.textContent = "The build did not load.";
+          unityShowBanner(String(message), 'error');
+        });
+      };
+      script.onerror = function () {
+        note.textContent = "The build did not load.";
+        unityShowBanner("Could not fetch " + loaderUrl +
+          " — check that Build/ was uploaded whole and that compression is off.", 'error');
+      };
       document.body.appendChild(script);
-
     </script>
   </body>
 </html>

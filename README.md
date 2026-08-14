@@ -6,8 +6,26 @@ Compiled WebGL output only. Source lives in the private `Guild-Rancher` repo.
 the sandbox the Unity fork exists to get out of. Frame times here say nothing
 about what the engine does natively — that answer needs the APK.
 
-## What this build holds (2026-08-12)
+## The page
 
+The loading screen ends in a button rather than dissolving on its own: the
+Fullscreen API only answers a user gesture, so the tap that starts the game is
+the tap that spends it. "stay in the page" is beside it for anyone who would
+rather not, and the corner mark puts it full screen again later.
+
+Every payload URL carries the build's own stamp (`?v=`), written in by the build
+— a redeploy that kept the same four file names was a redeploy a returning phone
+could miss.
+
+## What this build holds (2026-08-14)
+
+- **The estate, walked.** The guild is a place: the grounds are a chart you walk
+  with every room's interior stamped into the same plane, so a doorway is a gap
+  you step through and the roof lifts off the room you are standing in. No
+  press, no loading screen, no warp.
+- **Rooms with work in them.** The Great Hall's roster, the Grounds, the
+  Athanor's board, the Academy's week, the Forge, the Kitchen and the
+  Apothecary — reached from inside the building they belong to.
 - **Combat.** The web build's own numbers, transcribed: d20 + stat mod + prof
   vs 10+dex AC, hp 20+CON×2, crits double the dice, a hit is never free. One
   resolver answers the player's swing, the AI's decision and the HUD readout.
