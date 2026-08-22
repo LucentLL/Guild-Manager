@@ -354,6 +354,50 @@
       document.addEventListener('fullscreenchange', syncFsButton);
       document.addEventListener('webkitfullscreenchange', syncFsButton);
 
+      // ── A STAMP CANNOT BUST ITS OWN CACHE ────────────────────────────────
+      //
+      // The `?v=` above dates every PAYLOAD url, which is what stops a phone
+      // playing three-commit-old code (the 2026-08-14 trap). It does nothing
+      // for the file that CARRIES it. GitHub Pages serves index.html with
+      // `Cache-Control: max-age=600`, so for ten minutes after a deploy a
+      // returning browser uses its cached index.html WITHOUT revalidating —
+      // and that stale page asks for the old `?v=` urls, which are the same
+      // paths the new build just overwrote. Whatever it still holds it serves
+      // from cache; whatever it evicted it re-fetches NEW. An old framework
+      // stitched to a new wasm does not fail politely: it comes apart as
+      // "Not implemented: Class::FromIl2CppType" and then recurses until the
+      // stack dies. Reported from a handset, 2026-08-22, with `?v=` one build
+      // behind in every frame of the trace — which is what named it.
+      //
+      // So the page checks itself before it loads 32MB of anything: re-fetch
+      // index.html past the cache, read the stamp it ACTUALLY has now, and if
+      // this page is not it, go to a url this browser has never held. That is
+      // the only lever that reliably makes a browser take a fresh document
+      // while its cached copy is still nominally fresh.
+      //
+      // Failure is not fatal here on purpose: offline, blocked, or a fetch
+      // that throws all fall through to playing what we have, because a build
+      // that refuses to start is worse than one that might be a version late.
+      function withCurrentBuild(go) {
+        var here = location.pathname;
+        if (!window.fetch) { go(); return; }
+        var settled = false;
+        var once = function () { if (!settled) { settled = true; go(); } };
+        // Never hang the game on a slow HEAD of our own page.
+        setTimeout(once, 4000);
+        fetch(here, { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.text() : null; })
+          .then(function (t) {
+            var m = t && t.match(/var v = "\?v=([^"]*)"/);
+            if (!m || ('?v=' + m[1]) === v) { once(); return; }
+            if (settled) return;              // already playing; do not yank it away
+            settled = true;
+            note.textContent = 'A newer build is out - fetching it.';
+            location.replace(here + '?b=' + encodeURIComponent(m[1]));
+          })
+          .catch(once);
+      }
+
       var script = document.createElement("script");
       script.src = loaderUrl;
       script.onload = function () {
@@ -377,7 +421,7 @@
         unityShowBanner("Could not fetch " + loaderUrl +
           " — check that Build/ was uploaded whole and that compression is off.", 'error');
       };
-      document.body.appendChild(script);
+      withCurrentBuild(function () { document.body.appendChild(script); });
     </script>
   </body>
 </html>
