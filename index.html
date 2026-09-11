@@ -212,6 +212,7 @@
         <div id="bar"><i></i></div>
         <button id="enter" type="button">ENTER FULL SCREEN</button>
         <button id="windowed" type="button">stay in the page</button>
+        <p class="sub" id="padhint" hidden>or press any button on your controller</p>
       </div>
 
       <div id="fs" title="Full screen">&#9974;</div>
@@ -294,7 +295,7 @@
       // played on 2026-08-14 was three commits behind the source it was cut
       // from. BuildScript.cs writes the stamp in after the build — see
       // StampCacheBuster there; the placeholder below is what it replaces.
-      var v = "?v=20260911-0125";
+      var v = "?v=20260911-2027";
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/WebGL.loader.js" + v;
@@ -343,6 +344,68 @@
       enterBtn.addEventListener('click', function () { start(true); });
       windowBtn.addEventListener('click', function () { start(false); });
       fsBtn.addEventListener('click', goFullscreen);
+
+      // ── A CONTROLLER CAN START THE GAME ───────────────────────────────
+      //
+      // "The game does not recognize controller input on starting page to
+      // start game." (owner, 2026-09-11.) This gate is PLAIN HTML — it runs
+      // before the engine exists, so none of the game's own pad handling is
+      // loaded yet, and two buttons that only answer a mouse are a wall for
+      // anybody holding a pad.
+      //
+      // FULL SCREEN NEEDS A USER GESTURE and a gamepad button is not one in
+      // any browser, so a pad starts the game IN THE PAGE and the corner
+      // button is still there for the mouse. A KEY is a gesture, so Enter and
+      // Space take the full-screen road that the big button does.
+      var started = false;
+      function startOnce(fullscreen) {
+        if (started) return;
+        started = true;
+        start(fullscreen);
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (started || gate.classList.contains('gone')) return;
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          startOnce(true);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          startOnce(false);
+        }
+      });
+
+      // The pad is POLLED, because that is the only way the Gamepad API is
+      // read; the poll starts when a pad announces itself and stops the moment
+      // the gate is gone, so nothing is left spinning behind the game.
+      var padHint = document.getElementById('padhint');
+      var padPolling = false;
+      function pollPad() {
+        if (started || gate.classList.contains('gone')) { padPolling = false; return; }
+        var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (var i = 0; i < pads.length; i++) {
+          var p = pads[i];
+          if (!p || !p.buttons) continue;
+          for (var b = 0; b < p.buttons.length; b++) {
+            var btn = p.buttons[b];
+            if (btn && (btn.pressed || btn.value > 0.5)) { startOnce(false); return; }
+          }
+        }
+        requestAnimationFrame(pollPad);
+      }
+      function watchPads() {
+        if (padHint) padHint.hidden = false;
+        if (padPolling) return;
+        padPolling = true;
+        requestAnimationFrame(pollPad);
+      }
+      window.addEventListener('gamepadconnected', watchPads);
+      // A pad already sitting in a port on a reload announces nothing, so ask
+      // once — some browsers answer, and the listener above covers the rest.
+      (function () {
+        var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (var i = 0; i < pads.length; i++) if (pads[i]) { watchPads(); return; }
+      })();
 
       // The corner button only exists while there is somewhere to go: it is
       // hidden the moment the document IS full screen, so it never sits on top
