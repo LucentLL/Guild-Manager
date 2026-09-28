@@ -282,6 +282,22 @@
       window.addEventListener('unhandledrejection', function (e) {
         surface('unhandled rejection: ' + String(e && e.reason));
       });
+      // A REFUSED POINTER LOCK IS NOT AN ERROR (the review, 2026-09-27). The
+      // mouse is the look while you play (PointerLook.cs), and a browser must
+      // refuse a lock asked for just after its own Escape: the promise it
+      // returns rejects, the engine never reads it, and the handler above
+      // painted a red strip over the game until it was tapped away. The game
+      // reads the refusal itself (document.pointerLockElement stays null, and
+      // the cursor shows again); the rejection is caught here, and only it.
+      (function () {
+        var ask = Element.prototype.requestPointerLock;
+        if (!ask) return;
+        Element.prototype.requestPointerLock = function () {
+          var p = ask.apply(this, arguments);
+          if (p && typeof p.catch === 'function') p.catch(function () {});
+          return p;
+        };
+      })();
       // Tap the strip to clear it — it sits over the top of the game.
       logBox.addEventListener('click', function () {
         logBox.textContent = '';
@@ -295,7 +311,7 @@
       // played on 2026-08-14 was three commits behind the source it was cut
       // from. BuildScript.cs writes the stamp in after the build — see
       // StampCacheBuster there; the placeholder below is what it replaces.
-      var v = "?v=20260928-0256";
+      var v = "?v=20260928-1351";
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/WebGL.loader.js" + v;
