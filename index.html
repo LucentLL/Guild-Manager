@@ -311,7 +311,7 @@
       // played on 2026-08-14 was three commits behind the source it was cut
       // from. BuildScript.cs writes the stamp in after the build — see
       // StampCacheBuster there; the placeholder below is what it replaces.
-      var v = "?v=20260929-0617";
+      var v = "?v=20260929-1116";
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/WebGL.loader.js" + v;
@@ -390,6 +390,18 @@
           startOnce(false);
         }
       });
+
+      // THE DRAFTING TABLE'S CTRL+S IS THE GAME'S SAVE (the map survey,
+      // 2026-09-28), not the browser's "Save page as". Only the browser's
+      // default is stopped — the key still reaches the game, which reads it off
+      // its own keyboard (TableKeys) — and never while a text box of the page
+      // itself is being typed in.
+      document.addEventListener('keydown', function (e) {
+        if (!(e.ctrlKey || e.metaKey) || (e.key !== 's' && e.key !== 'S')) return;
+        var el = document.activeElement;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el !== canvas) return;
+        e.preventDefault();
+      }, true);
 
       // The pad is POLLED, because that is the only way the Gamepad API is
       // read; the poll starts when a pad announces itself and stops the moment
