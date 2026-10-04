@@ -311,15 +311,15 @@
       // played on 2026-08-14 was three commits behind the source it was cut
       // from. BuildScript.cs writes the stamp in after the build — see
       // StampCacheBuster there; the placeholder below is what it replaces.
-      var v = "?v=20261004-0505";
+      var v = "?v=20261004-0559";
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/WebGL.loader.js" + v;
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/WebGL.data" + v,
-        frameworkUrl: buildUrl + "/WebGL.framework.js" + v,
-        codeUrl: buildUrl + "/WebGL.wasm" + v,
+        dataUrl: buildUrl + "/WebGL.data.unityweb" + v,
+        frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb" + v,
+        codeUrl: buildUrl + "/WebGL.wasm.unityweb" + v,
         streamingAssetsUrl: "StreamingAssets",
         companyName: "DefaultCompany",
         productName: "Guild Manager",
