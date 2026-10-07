@@ -25,14 +25,20 @@
     <title>Guild Manager</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e0d0a'/%3E%3Cpath d='M8 2l5 3v6l-5 3-5-3V5z' fill='%23d4a842'/%3E%3C/svg%3E">
     <style>
-      /* The hall's own palette — UiKit.Ink / Gold / Parchment, so the page the
-         game loads in is the same room as the game. */
+      /* THE TITLE PAGE'S OWN LOOK (owner, 2026-10-06: "Loading/launch screen should match art
+         style of main menu"): the warm white page (TitleScreen.CrestPlate), the black wordmark and
+         its rule (CrestInk), the wheel's gold (WheelGold) — so the page the game loads in is the
+         title it opens on. The ink and gold below still dress the in-game overlays. */
       :root {
         --ink: #0e0d0a;
         --ink-soft: #17150f;
         --gold: #d4a842;
         --gold-dim: #9e8038;
         --parchment: #e8dcbf;
+        --plate: #f7f2e8;
+        --crest-ink: #120f0d;
+        --wheel-gold: #db9e1a;
+        --page-grey: #4d4740;
       }
 
       html, body {
@@ -40,8 +46,8 @@
         padding: 0;
         width: 100%;
         height: 100%;
-        background: var(--ink);
-        color: var(--parchment);
+        background: var(--plate);
+        color: var(--crest-ink);
         font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
         overflow: hidden;
         /* A game canvas must never rubber-band or pull-to-refresh under a thumb. */
@@ -68,7 +74,7 @@
         display: block;
         width: 100%;
         height: 100%;
-        background: var(--ink);
+        background: var(--plate);
         /* No browser gestures on the play surface: the touch stick and the
            swing disc are TouchControls', and a pinch that zooms the PAGE is a
            pinch the camera never sees. */
@@ -93,7 +99,7 @@
         gap: 18px;
         padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
                  max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-        background: var(--ink);
+        background: var(--plate);
         text-align: center;
         z-index: 10;
       }
@@ -101,43 +107,51 @@
 
       #gate h1 {
         margin: 0;
-        font-size: clamp(22px, 5vw, 40px);
-        letter-spacing: 0.06em;
-        color: var(--gold);
+        font-size: clamp(26px, 6vw, 48px);
+        letter-spacing: 0.08em;
+        color: var(--crest-ink);
         font-weight: 700;
+      }
+      /* The rule under the wordmark, about the word's own width (TitleScreen's). */
+      #gate .rule {
+        width: min(300px, 60vw);
+        height: 1px;
+        background: var(--crest-ink);
+        margin-top: -10px;
       }
 
       #gate .sub {
         margin: 0;
         font-size: clamp(11px, 2.4vw, 14px);
-        color: var(--gold-dim);
+        color: var(--page-grey);
         letter-spacing: 0.04em;
       }
 
       #bar {
         width: min(320px, 70vw);
         height: 10px;
-        border: 1px solid rgba(212, 168, 66, 0.45);
+        border: 1px solid rgba(18, 15, 13, 0.45);
         border-radius: 5px;
         overflow: hidden;
-        background: rgba(212, 168, 66, 0.08);
+        background: rgba(18, 15, 13, 0.05);
       }
       #bar > i {
         display: block;
         width: 0%;
         height: 100%;
-        background: var(--gold);
+        background: var(--wheel-gold);
         transition: width 0.15s linear;
       }
 
+      /* The door the title's wheel has chosen: gold words with a dark rim, a pointer either side. */
       #enter {
         appearance: none;
-        border: 1px solid rgba(212, 168, 66, 0.55);
-        border-radius: 4px;
-        background: var(--ink-soft);
-        color: var(--gold);
-        font: 700 clamp(13px, 3vw, 16px)/1 inherit;
-        letter-spacing: 0.08em;
+        border: 0;
+        background: none;
+        color: var(--wheel-gold);
+        font: 700 clamp(16px, 3.6vw, 22px)/1 inherit;
+        letter-spacing: 0.06em;
+        text-shadow: -1px 0 var(--crest-ink), 1px 0 var(--crest-ink), 0 -1px var(--crest-ink), 0 1px var(--crest-ink);
         padding: 14px 26px;
         cursor: pointer;
         /* Hidden rather than disabled until the build has landed: a button you
@@ -145,12 +159,21 @@
         visibility: hidden;
       }
       #enter.ready { visibility: visible; }
-      #enter:hover { background: #211d12; }
+      #enter:hover { color: #f0b52a; }
+      #enter::before, #enter::after {
+        content: "";
+        display: inline-block;
+        vertical-align: middle;
+        border-top: 7px solid transparent;
+        border-bottom: 7px solid transparent;
+      }
+      #enter::before { border-left: 11px solid var(--crest-ink); margin-right: 22px; }
+      #enter::after { border-right: 11px solid var(--crest-ink); margin-left: 22px; }
 
       #windowed {
         background: none;
         border: 0;
-        color: var(--gold-dim);
+        color: var(--page-grey);
         font: 400 clamp(10px, 2.2vw, 13px)/1 inherit;
         text-decoration: underline;
         cursor: pointer;
@@ -207,7 +230,9 @@
       <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
 
       <div id="gate">
-        <h1>Guild Manager</h1>
+        <h1>THE CRUCIBLE</h1>
+        <div class="rule"></div>
+        <p class="sub">a guild, and the people in it</p>
         <p class="sub" id="status">Loading…</p>
         <div id="bar"><i></i></div>
         <button id="enter" type="button">ENTER FULL SCREEN</button>
@@ -311,7 +336,7 @@
       // played on 2026-08-14 was three commits behind the source it was cut
       // from. BuildScript.cs writes the stamp in after the build — see
       // StampCacheBuster there; the placeholder below is what it replaces.
-      var v = "?v=20261006-2236";
+      var v = "?v=20261007-0023";
 
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/WebGL.loader.js" + v;
